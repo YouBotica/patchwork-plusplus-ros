@@ -82,30 +82,30 @@ class PatchWorkpp {
     // Init ROS 2 related
     RCLCPP_INFO(node_handle_->get_logger(), "Inititalizing PatchWork++...");
 
-    verbose_ = node_handle_->declare_parameter("patchworkpp/verbose", false);
+    verbose_ = node_handle_->declare_parameter("verbose", false);
 
-    sensor_height_ = node_handle_->declare_parameter("patchworkpp/sensor_height", 1.723);
-    num_iter_ = node_handle_->declare_parameter("patchworkpp/num_iter", 3);
-    num_lpr_ = node_handle_->declare_parameter("patchworkpp/num_lpr", 20);
-    num_min_pts_ = node_handle_->declare_parameter("patchworkpp/num_min_pts", 10);
-    th_seeds_ = node_handle_->declare_parameter("patchworkpp/th_seeds", 0.4);
-    th_dist_ = node_handle_->declare_parameter("patchworkpp/th_dist", 0.3);
-    th_seeds_v_ = node_handle_->declare_parameter("patchworkpp/th_seeds_v", 0.4);
-    th_dist_v_ = node_handle_->declare_parameter("patchworkpp/th_dist_v", 0.3);
-    max_range_ = node_handle_->declare_parameter("patchworkpp/max_r", 80.0);
-    min_range_ = node_handle_->declare_parameter("patchworkpp/min_r", 2.7);
-    uprightness_thr_ = node_handle_->declare_parameter("patchworkpp/uprightness_thr", 0.5);
+    sensor_height_ = node_handle_->declare_parameter("sensor_height", 1.723);
+    num_iter_ = node_handle_->declare_parameter("num_iter", 3);
+    num_lpr_ = node_handle_->declare_parameter("num_lpr", 20);
+    num_min_pts_ = node_handle_->declare_parameter("num_min_pts", 10);
+    th_seeds_ = node_handle_->declare_parameter("th_seeds", 0.4);
+    th_dist_ = node_handle_->declare_parameter("th_dist", 0.3);
+    th_seeds_v_ = node_handle_->declare_parameter("th_seeds_v", 0.4);
+    th_dist_v_ = node_handle_->declare_parameter("th_dist_v", 0.3);
+    max_range_ = node_handle_->declare_parameter("max_r", 80.0);
+    min_range_ = node_handle_->declare_parameter("min_r", 2.7);
+    uprightness_thr_ = node_handle_->declare_parameter("uprightness_thr", 0.5);
     adaptive_seed_selection_margin_ =
-        node_handle_->declare_parameter("patchworkpp/adaptive_seed_selection_margin", -1.1);
-    RNR_ver_angle_thr_ = node_handle_->declare_parameter("patchworkpp/RNR_ver_angle_thr", -15.0);
-    RNR_intensity_thr_ = node_handle_->declare_parameter("patchworkpp/RNR_intensity_thr", 0.2);
+        node_handle_->declare_parameter("adaptive_seed_selection_margin", -1.1);
+    RNR_ver_angle_thr_ = node_handle_->declare_parameter("RNR_ver_angle_thr", -15.0);
+    RNR_intensity_thr_ = node_handle_->declare_parameter("RNR_intensity_thr", 0.2);
     max_flatness_storage_ =
-        node_handle_->declare_parameter("patchworkpp/max_flatness_storage", 1000);
+        node_handle_->declare_parameter("max_flatness_storage", 1000);
     max_elevation_storage_ =
-        node_handle_->declare_parameter("patchworkpp/max_elevation_storage", 1000);
-    enable_RNR_ = node_handle_->declare_parameter("patchworkpp/enable_RNR", true);
-    enable_RVPF_ = node_handle_->declare_parameter("patchworkpp/enable_RVPF", true);
-    enable_TGR_ = node_handle_->declare_parameter("patchworkpp/enable_TGR", true);
+        node_handle_->declare_parameter("max_elevation_storage", 1000);
+    enable_RNR_ = node_handle_->declare_parameter("enable_RNR", true);
+    enable_RVPF_ = node_handle_->declare_parameter("enable_RVPF", true);
+    enable_TGR_ = node_handle_->declare_parameter("enable_TGR", true);
 
     RCLCPP_INFO(node_handle_->get_logger(), "Sensor Height: %f", sensor_height_);
     RCLCPP_INFO(node_handle_->get_logger(), "Num of Iteration: %d", num_iter_);
@@ -120,15 +120,15 @@ class PatchWorkpp {
                 adaptive_seed_selection_margin_);
 
     // CZM denotes 'Concentric Zone Model'. Please refer to our paper
-    num_zones_ = node_handle_->declare_parameter<int>("patchworkpp/czm/num_zones");
+    num_zones_ = node_handle_->declare_parameter<int>("czm/num_zones");
     num_sectors_each_zone_ =
-        node_handle_->declare_parameter<std::vector<long int>>("patchworkpp/czm/num_sectors_each_zone");
+        node_handle_->declare_parameter<std::vector<long int>>("czm/num_sectors_each_zone");
     num_rings_each_zone_ =
-        node_handle_->declare_parameter<std::vector<long int>>("patchworkpp/czm/mum_rings_each_zone");
+        node_handle_->declare_parameter<std::vector<long int>>("czm/mum_rings_each_zone");
     elevation_thr_ = node_handle_->declare_parameter<std::vector<double>>(
-        "patchworkpp/czm/elevation_thresholds");
+        "czm/elevation_thresholds");
     flatness_thr_ =
-        node_handle_->declare_parameter<std::vector<double>>("patchworkpp/czm/flatness_thresholds");
+        node_handle_->declare_parameter<std::vector<double>>("czm/flatness_thresholds");
 
     RCLCPP_INFO(node_handle_->get_logger(), "Num. zones: %d", num_zones_);
 
@@ -158,7 +158,7 @@ class PatchWorkpp {
          << endl;
     num_rings_of_interest_ = elevation_thr_.size();
 
-    visualize_ = node_handle_->declare_parameter("patchworkpp/visualize", false);
+    visualize_ = node_handle_->declare_parameter("visualize", false);
 
     // int num_polygons = std::inner_product(num_rings_each_zone_.begin(),
     // num_rings_each_zone_.end(), num_sectors_each_zone_.begin(), 0); poly_list_.header.frame_id =
@@ -171,18 +171,18 @@ class PatchWorkpp {
 
     if (visualize_){
         // PlaneViz        =
-        // node_handle_->create_publisher<jsk_recognition_msgs::msg::PolygonArray>("patchworkpp/plane",
+        // node_handle_->create_publisher<jsk_recognition_msgs::msg::PolygonArray>("plane",
         // rclcpp::SystemDefaultsQoS());
         pub_revert_pc = node_handle_->create_publisher<sensor_msgs::msg::PointCloud2>(
-            "patchworkpp/revert_pc", rclcpp::SystemDefaultsQoS());
+            "revert_pc", rclcpp::SystemDefaultsQoS());
         pub_reject_pc = node_handle_->create_publisher<sensor_msgs::msg::PointCloud2>(
-            "patchworkpp/reject_pc", rclcpp::SystemDefaultsQoS());
+            "reject_pc", rclcpp::SystemDefaultsQoS());
         pub_normal = node_handle_->create_publisher<sensor_msgs::msg::PointCloud2>(
-            "patchworkpp/normals", rclcpp::SystemDefaultsQoS());
+            "normals", rclcpp::SystemDefaultsQoS());
         pub_noise = node_handle_->create_publisher<sensor_msgs::msg::PointCloud2>(
-            "patchworkpp/noise", rclcpp::SystemDefaultsQoS());
+            "noise", rclcpp::SystemDefaultsQoS());
         pub_vertical = node_handle_->create_publisher<sensor_msgs::msg::PointCloud2>(
-            "patchworkpp/vertical", rclcpp::SystemDefaultsQoS());
+            "vertical", rclcpp::SystemDefaultsQoS());
     }
 
     min_range_z2_ = (7 * min_range_ + max_range_) / 8.0;
