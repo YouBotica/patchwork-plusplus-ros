@@ -120,15 +120,15 @@ class PatchWorkpp {
                 adaptive_seed_selection_margin_);
 
     // CZM denotes 'Concentric Zone Model'. Please refer to our paper
-    num_zones_ = node_handle_->declare_parameter<int>("czm/num_zones");
+    num_zones_ = node_handle_->declare_parameter<int>("czm.num_zones");
     num_sectors_each_zone_ =
-        node_handle_->declare_parameter<std::vector<long int>>("czm/num_sectors_each_zone");
+        node_handle_->declare_parameter<std::vector<long int>>("czm.num_sectors_each_zone");
     num_rings_each_zone_ =
-        node_handle_->declare_parameter<std::vector<long int>>("czm/mum_rings_each_zone");
+        node_handle_->declare_parameter<std::vector<long int>>("czm.mum_rings_each_zone");
     elevation_thr_ = node_handle_->declare_parameter<std::vector<double>>(
-        "czm/elevation_thresholds");
+        "czm.elevation_thresholds");
     flatness_thr_ =
-        node_handle_->declare_parameter<std::vector<double>>("czm/flatness_thresholds");
+        node_handle_->declare_parameter<std::vector<double>>("czm.flatness_thresholds");
 
     RCLCPP_INFO(node_handle_->get_logger(), "Num. zones: %d", num_zones_);
 
