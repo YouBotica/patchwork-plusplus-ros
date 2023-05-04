@@ -206,7 +206,7 @@ class PatchWorkpp {
     }
   }
 
-  void estimate_ground(pcl::PointCloud<PointT> cloud_in, pcl::PointCloud<PointT> &cloud_ground,
+  void estimate_ground(const pcl::PointCloud<PointT>& cloud_in, pcl::PointCloud<PointT> &cloud_ground,
                        pcl::PointCloud<PointT> &cloud_nonground, double &time_taken);
 
  private:
@@ -288,7 +288,7 @@ class PatchWorkpp {
   void pc2czm(const pcl::PointCloud<PointT> &src, std::vector<Zone> &czm,
               pcl::PointCloud<PointT> &cloud_nonground);
 
-  void reflected_noise_removal(pcl::PointCloud<PointT> &cloud,
+  void reflected_noise_removal(const pcl::PointCloud<PointT> &cloud,
                                pcl::PointCloud<PointT> &cloud_nonground);
 
   void temporal_ground_revert(pcl::PointCloud<PointT> &cloud_ground,
@@ -438,7 +438,7 @@ inline void PatchWorkpp<PointT>::extract_initial_seeds(const int zone_idx,
 }
 
 template <typename PointT>
-inline void PatchWorkpp<PointT>::reflected_noise_removal(pcl::PointCloud<PointT> &cloud_in,
+inline void PatchWorkpp<PointT>::reflected_noise_removal(const pcl::PointCloud<PointT> &cloud_in,
                                                          pcl::PointCloud<PointT> &cloud_nonground) {
   for (size_t i = 0; i < cloud_in.size(); i++) {
     double r = sqrt(cloud_in[i].x * cloud_in[i].x + cloud_in[i].y * cloud_in[i].y);
@@ -463,7 +463,7 @@ inline void PatchWorkpp<PointT>::reflected_noise_removal(pcl::PointCloud<PointT>
 */
 
 template <typename PointT>
-inline void PatchWorkpp<PointT>::estimate_ground(pcl::PointCloud<PointT> cloud_in,
+inline void PatchWorkpp<PointT>::estimate_ground(const pcl::PointCloud<PointT>& cloud_in,
                                                  pcl::PointCloud<PointT> &cloud_ground,
                                                  pcl::PointCloud<PointT> &cloud_nonground,
                                                  double &time_taken) {
@@ -662,27 +662,27 @@ inline void PatchWorkpp<PointT>::estimate_ground(pcl::PointCloud<PointT> cloud_i
     sensor_msgs::msg::PointCloud2 cloud_ROS;
     pcl::toROSMsg(revert_pc_, cloud_ROS);
     cloud_ROS.header.stamp = node_handle_->now();
-    cloud_ROS.header.frame_id = "map";
+    cloud_ROS.header.frame_id = cloud_in.header.frame_id;
     pub_revert_pc->publish(cloud_ROS);
 
     pcl::toROSMsg(reject_pc_, cloud_ROS);
     cloud_ROS.header.stamp = node_handle_->now();
-    cloud_ROS.header.frame_id = "map";
+    cloud_ROS.header.frame_id = cloud_in.header.frame_id;
     pub_reject_pc->publish(cloud_ROS);
 
     pcl::toROSMsg(normals_, cloud_ROS);
     cloud_ROS.header.stamp = node_handle_->now();
-    cloud_ROS.header.frame_id = "map";
+    cloud_ROS.header.frame_id = cloud_in.header.frame_id;
     pub_normal->publish(cloud_ROS);
 
     pcl::toROSMsg(noise_pc_, cloud_ROS);
     cloud_ROS.header.stamp = node_handle_->now();
-    cloud_ROS.header.frame_id = "map";
+    cloud_ROS.header.frame_id = cloud_in.header.frame_id;
     pub_noise->publish(cloud_ROS);
 
     pcl::toROSMsg(vertical_pc_, cloud_ROS);
     cloud_ROS.header.stamp = node_handle_->now();
-    cloud_ROS.header.frame_id = "map";
+    cloud_ROS.header.frame_id = cloud_in.header.frame_id;
     pub_vertical->publish(cloud_ROS);
   }
 
