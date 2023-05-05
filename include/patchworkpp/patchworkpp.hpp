@@ -16,6 +16,7 @@
 
 #include <Eigen/Dense>
 #include <boost/format.hpp>
+#include <execution>
 #include <mutex>
 #include <numeric>
 #include <queue>
@@ -164,7 +165,6 @@ class PatchWorkpp {
     // "map"; poly_list_.polygons.reserve(num_polygons);
 
     revert_pc_.reserve(NUM_HEURISTIC_MAX_PTS_IN_PATCH);
-    ground_pc_.reserve(NUM_HEURISTIC_MAX_PTS_IN_PATCH);
     regionwise_ground_.reserve(NUM_HEURISTIC_MAX_PTS_IN_PATCH);
     regionwise_nonground_.reserve(NUM_HEURISTIC_MAX_PTS_IN_PATCH);
 
@@ -206,7 +206,8 @@ class PatchWorkpp {
     }
   }
 
-  void estimate_ground(const pcl::PointCloud<PointT>& cloud_in, pcl::PointCloud<PointT> &cloud_ground,
+  void estimate_ground(const pcl::PointCloud<PointT> &cloud_in,
+                       pcl::PointCloud<PointT> &cloud_ground,
                        pcl::PointCloud<PointT> &cloud_nonground, double &time_taken);
 
  private:
@@ -274,7 +275,6 @@ class PatchWorkpp {
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_revert_pc, pub_reject_pc,
       pub_normal, pub_noise, pub_vertical;
   pcl::PointCloud<PointT> revert_pc_, reject_pc_, noise_pc_, vertical_pc_;
-  pcl::PointCloud<PointT> ground_pc_;
 
   pcl::PointCloud<pcl::PointXYZINormal> normals_;
 
@@ -302,12 +302,13 @@ class PatchWorkpp {
   void update_flatness_thr();
 
   double xy2theta(const double &x, const double &y);
+  double fastatan2(const double &x, const double &y);
 
   double xy2radius(const double &x, const double &y);
 
   float estimate_plane(const pcl::PointCloud<PointT> &ground);
 
-  void extract_piecewiseground(const int& zone_idx, const pcl::PointCloud<PointT> &src,
+  void extract_piecewiseground(const int &zone_idx, const pcl::PointCloud<PointT> &src,
                                pcl::PointCloud<PointT> &dst,
                                pcl::PointCloud<PointT> &non_ground_dst);
 
@@ -378,11 +379,9 @@ inline float PatchWorkpp<PointT>::estimate_plane(const pcl::PointCloud<PointT> &
   singular_values_ = svd.singularValues();
 
   // use the least singular vector as normal
-  normal_ = (svd.matrixU().col(2));
+  normal_ = svd.matrixU().col(2);
 
-  if (normal_(2) < 0) {
-    for (int i = 0; i < 3; i++) normal_(i) *= -1;
-  }
+  if (normal_(2) < 0) normal_ *= -1.;
 
   // mean ground seeds value
   Eigen::Vector3f seeds_mean = pc_mean_.head<3>();
@@ -463,7 +462,7 @@ inline void PatchWorkpp<PointT>::reflected_noise_removal(const pcl::PointCloud<P
 */
 
 template <typename PointT>
-inline void PatchWorkpp<PointT>::estimate_ground(const pcl::PointCloud<PointT>& cloud_in,
+inline void PatchWorkpp<PointT>::estimate_ground(const pcl::PointCloud<PointT> &cloud_in,
                                                  pcl::PointCloud<PointT> &cloud_ground,
                                                  pcl::PointCloud<PointT> &cloud_nonground,
                                                  double &time_taken) {
@@ -582,7 +581,7 @@ inline void PatchWorkpp<PointT>::estimate_ground(const pcl::PointCloud<PointT>& 
         bool is_heading_outside = heading < 0.0;
         bool is_near_zone = concentric_idx < num_rings_of_interest_;
         bool is_not_elevated =
-            is_near_zone ? ground_elevation < elevation_thr_[concentric_idx] : false;
+            is_near_zone ? ground_elevation < (elevation_thr_[concentric_idx] + th_dist_) : false;
         bool is_flat = is_near_zone ? ground_flatness < flatness_thr_[concentric_idx] : false;
 
         /*
@@ -656,7 +655,7 @@ inline void PatchWorkpp<PointT>::estimate_ground(const pcl::PointCloud<PointT>& 
   // cout << "Time taken to estimate: " << t_total_estimate << endl;
   // cout << "Time taken to Revert: " <<  t_revert << endl;
   // cout << "Time taken to update : " << end - t_update << endl;
-  
+
   // FIXME: visualization cloud frame_id should be base_link frame instead of map
   if (visualize_) {
     sensor_msgs::msg::PointCloud2 cloud_ROS;
@@ -740,7 +739,7 @@ inline void PatchWorkpp<PointT>::update_flatness_thr(void) {
 
     double update_mean = 0.0, update_stdev = 0.0;
     calc_mean_stdev(update_flatness_[i], update_mean, update_stdev);
-    flatness_thr_[i] = update_mean + update_stdev + 1e-6;
+    flatness_thr_[i] = update_mean + 2 * update_stdev;
 
     // if (verbose_) { cout << "flatness threshold [" << i << "]: " << flatness_thr_[i] << endl; }
 
@@ -839,19 +838,21 @@ inline void PatchWorkpp<PointT>::temporal_ground_revert(
 
 // For adaptive
 template <typename PointT>
-inline void PatchWorkpp<PointT>::extract_piecewiseground(const int& zone_idx,
+inline void PatchWorkpp<PointT>::extract_piecewiseground(const int &zone_idx,
                                                          const pcl::PointCloud<PointT> &src,
                                                          pcl::PointCloud<PointT> &dst,
                                                          pcl::PointCloud<PointT> &non_ground_dst) {
+  static pcl::PointCloud<PointT> ground_pc_;
+  ground_pc_.reserve(NUM_HEURISTIC_MAX_PTS_IN_PATCH);
+
   // 0. Initialization
-  if (!ground_pc_.empty()) ground_pc_.clear();
+  ground_pc_.clear();
   if (!dst.empty()) dst.clear();
   if (!non_ground_dst.empty()) non_ground_dst.clear();
 
   // 1. Region-wise Vertical Plane Fitting (R-VPF)
   // : removes potential vertical plane under the ground plane
-  pcl::PointCloud<PointT> src_wo_verticals;
-  src_wo_verticals = src;
+  pcl::PointCloud<PointT> src_wo_verticals = src;
 
   if (enable_RVPF_ && zone_idx == 0) {
     for (int i = 0; i < num_iter_; i++) {
@@ -860,25 +861,20 @@ inline void PatchWorkpp<PointT>::extract_piecewiseground(const int& zone_idx,
 
       if (normal_(2) < uprightness_thr_) {
         pcl::PointCloud<PointT> src_tmp;
-        src_tmp = src_wo_verticals;
-        src_wo_verticals.clear();
 
-        Eigen::MatrixXf points(src_tmp.points.size(), 3);
-        int j = 0;
-        for (auto &p : src_tmp.points) {
-          points.row(j++) << p.x, p.y, p.z;
-        }
-        // ground plane model
-        Eigen::VectorXf result = points * normal_;
-
-        for (int r = 0; r < result.rows(); r++) {
+        std::vector<float> result(src_wo_verticals.points.size());
+        std::transform(
+            src_wo_verticals.points.begin(), src_wo_verticals.points.end(), result.begin(),
+            [&](const auto &p) { return p.x * normal_(0) + p.y * normal_(1) + p.z * normal_(2); });
+        for (int r = 0; r < static_cast<int>(result.size()); r++) {
           if (std::fabs(result[r] + d_) < th_dist_v_) {
-            non_ground_dst.points.push_back(src_tmp[r]);
-            vertical_pc_.points.push_back(src_tmp[r]);
+            non_ground_dst.points.push_back(src_wo_verticals[r]);
+            vertical_pc_.points.push_back(src_wo_verticals[r]);
           } else {
-            src_wo_verticals.points.push_back(src_tmp[r]);
+            src_tmp.points.push_back(src_wo_verticals[r]);
           }
         }
+        src_wo_verticals = src_tmp;
       } else
         break;
     }
@@ -1005,27 +1001,42 @@ void PatchWorkpp<PointT>::set_ground_likelihood_estimation_status(
 template <typename PointT>
 inline void PatchWorkpp<PointT>::calc_mean_stdev(std::vector<double> vec, double &mean,
                                                  double &stdev) {
-  if (vec.size() <= 1) return;
-
-  mean = std::accumulate(vec.begin(), vec.end(), 0.0) / vec.size();
-
-  for (size_t i = 0; i < vec.size(); i++) {
-    stdev += (vec.at(i) - mean) * (vec.at(i) - mean);
+  if (vec.size() == 0) return;
+  if (vec.size() == 1) {
+    mean = vec.at(0);
+    return;
   }
-  stdev /= vec.size() - 1;
-  stdev = sqrt(stdev);
+  mean = std::reduce(vec.begin(), vec.end()) / vec.size();
+  std::vector<double> diff(vec.size());
+  std::transform(vec.begin(), vec.end(), diff.begin(), [mean](double x) { return x - mean; });
+  double sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
+  stdev = std::sqrt(sq_sum / (vec.size() - 1));
 }
 
 template <typename PointT>
 inline double PatchWorkpp<PointT>::xy2theta(const double &x, const double &y) {  // 0 ~ 2 * PI
-  // if (y >= 0) {
-  //     return atan2(y, x); // 1, 2 quadrant
-  // } else {
-  //     return 2 * M_PI + atan2(y, x);// 3, 4 quadrant
-  // }
-
-  double angle = atan2(y, x);
+  // double angle = atan2(y, x);
+  // fast atan2 algorithm
+  double angle = fastatan2(x, y);
   return angle > 0 ? angle : 2 * M_PI + angle;
+}
+
+template <typename PointT>
+inline double PatchWorkpp<PointT>::fastatan2(const double &x, const double &y){
+  // reference: https://math.stackexchange.com/questions/1098487/atan2-faster-approximation
+  double absx = std::fabs(x);
+  double absy = std::fabs(y);
+  if (absy < DBL_EPSILON) return (x>0. ? 0. : M_PI);
+  if (absx < DBL_EPSILON) return std::copysign(M_PI_2, y);
+  if (x == y) return (x>0. ? M_PI_4 : -M_PI * 0.75);
+  if (x == -y) return (x>0. ? -M_PI_4 : M_PI * 0.75);
+  double a = std::fmin(absx, absy) / std::fmax(absx, absy);
+  double s = a * a;
+  double r = ((-0.0464964749 * s + 0.15931422) * s - 0.327622764) * s * a + a;
+  if (absy > absx) r = M_PI_2 - r;
+  if (x < 0.) r = M_PI - r;
+  if (y < 0.) r *= -1;
+  return r;
 }
 
 template <typename PointT>
