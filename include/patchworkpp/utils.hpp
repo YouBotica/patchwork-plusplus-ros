@@ -72,7 +72,7 @@ void PointXYZILID2XYZI(pcl::PointCloud<PointXYZILID>& src,
     pt_xyzi.y = pt.y;
     pt_xyzi.z = pt.z;
     pt_xyzi.intensity = pt.intensity;
-    dst->points.push_back(pt_xyzi);
+    dst->points.emplace_back(pt_xyzi);
   }
 }
 std::vector<int> outlier_classes = {UNLABELED, OUTLIER};
@@ -168,13 +168,13 @@ void discern_ground(const pcl::PointCloud<PointXYZILID>& src, pcl::PointCloud<Po
     if (iter != ground_classes.end()) {  // corresponding class is in ground classes
       if (pt.label == VEGETATION) {
         if (pt.z < VEGETATION_THR) {
-          ground.push_back(pt);
+          ground.emplace_back(pt);
         } else
-          non_ground.push_back(pt);
+          non_ground.emplace_back(pt);
       } else
-        ground.push_back(pt);
+        ground.emplace_back(pt);
     } else {
-      non_ground.push_back(pt);
+      non_ground.emplace_back(pt);
     }
   }
 }
@@ -189,9 +189,9 @@ void discern_ground_without_vegetation(const pcl::PointCloud<PointXYZILID>& src,
     if (pt.label == UNLABELED || pt.label == OUTLIER) continue;
     iter = std::find(ground_classes.begin(), ground_classes.end(), pt.label);
     if (iter != ground_classes.end()) {  // corresponding class is in ground classes
-      if (pt.label != VEGETATION) ground.push_back(pt);
+      if (pt.label != VEGETATION) ground.emplace_back(pt);
     } else {
-      non_ground.push_back(pt);
+      non_ground.emplace_back(pt);
     }
   }
 }
@@ -359,6 +359,7 @@ void pc2pcdfile(const pcl::PointCloud<PointXYZILID>& TP, const pcl::PointCloud<P
                 const pcl::PointCloud<PointXYZILID>& FN, const pcl::PointCloud<PointXYZILID>& TN,
                 std::string pcd_filename) {
   pcl::PointCloud<pcl::PointXYZI> pc_out;
+  pc_out.points.reserve(TP.points.size() + FP.points.size() + FN.points.size() + TN.points.size());
 
   for (auto const pt : TP.points) {
     pcl::PointXYZI pt_est;
@@ -366,7 +367,7 @@ void pc2pcdfile(const pcl::PointCloud<PointXYZILID>& TP, const pcl::PointCloud<P
     pt_est.y = pt.y;
     pt_est.z = pt.z;
     pt_est.intensity = TRUEPOSITIVE;
-    pc_out.points.push_back(pt_est);
+    pc_out.points.emplace_back(pt_est);
   }
   for (auto const pt : FP.points) {
     pcl::PointXYZI pt_est;
@@ -374,7 +375,7 @@ void pc2pcdfile(const pcl::PointCloud<PointXYZILID>& TP, const pcl::PointCloud<P
     pt_est.y = pt.y;
     pt_est.z = pt.z;
     pt_est.intensity = FALSEPOSITIVE;
-    pc_out.points.push_back(pt_est);
+    pc_out.points.emplace_back(pt_est);
   }
   for (auto const pt : FN.points) {
     pcl::PointXYZI pt_est;
@@ -382,7 +383,7 @@ void pc2pcdfile(const pcl::PointCloud<PointXYZILID>& TP, const pcl::PointCloud<P
     pt_est.y = pt.y;
     pt_est.z = pt.z;
     pt_est.intensity = FALSENEGATIVE;
-    pc_out.points.push_back(pt_est);
+    pc_out.points.emplace_back(pt_est);
   }
   for (auto const pt : TN.points) {
     pcl::PointXYZI pt_est;
@@ -390,7 +391,7 @@ void pc2pcdfile(const pcl::PointCloud<PointXYZILID>& TP, const pcl::PointCloud<P
     pt_est.y = pt.y;
     pt_est.z = pt.z;
     pt_est.intensity = TRUENEGATIVE;
-    pc_out.points.push_back(pt_est);
+    pc_out.points.emplace_back(pt_est);
   }
   pc_out.width = pc_out.points.size();
   pc_out.height = 1;

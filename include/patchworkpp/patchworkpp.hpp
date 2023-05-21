@@ -202,7 +202,7 @@ class PatchWorkpp {
     for (int i = 0; i < num_zones_; i++) {
       Zone z;
       initialize_zone(z, num_sectors_each_zone_[i], num_rings_each_zone_[i]);
-      ConcentricZoneModel_.push_back(z);
+      ConcentricZoneModel_.emplace_back(z);
     }
   }
 
@@ -424,7 +424,7 @@ inline void PatchWorkpp<PointT>::extract_initial_seeds(const int zone_idx,
   // iterate pointcloud, filter those height is less than lpr.height+th_seeds_
   for (size_t i = 0; i < p_sorted.points.size(); i++) {
     if (p_sorted.points[i].z < lpr_height + th_seed) {
-      init_seeds.points.push_back(p_sorted.points[i]);
+      init_seeds.points.emplace_back(p_sorted.points[i]);
     }
   }
 }
@@ -446,8 +446,8 @@ inline void PatchWorkpp<PointT>::reflected_noise_removal(const pcl::PointCloud<P
 
     if (ver_angle_in_deg < RNR_ver_angle_thr_ && z < -sensor_height_ - 0.8 &&
         cloud_in[i].intensity < RNR_intensity_thr_) {
-      cloud_nonground.push_back(cloud_in[i]);
-      noise_pc_.push_back(cloud_in[i]);
+      cloud_nonground.emplace_back(cloud_in[i]);
+      noise_pc_.emplace_back(cloud_in[i]);
       noise_idxs_.push(i);
     }
   }
@@ -590,10 +590,10 @@ inline void PatchWorkpp<PointT>::estimate_ground(const pcl::PointCloud<PointT> &
             and TGR (Temporal Ground Revert). More information in the paper Patchwork++.
         */
         if (is_upright && is_not_elevated && is_near_zone) {
-          update_elevation_[concentric_idx].push_back(ground_elevation);
-          update_flatness_[concentric_idx].push_back(ground_flatness);
+          update_elevation_[concentric_idx].emplace_back(ground_elevation);
+          update_flatness_[concentric_idx].emplace_back(ground_flatness);
 
-          ringwise_flatness.push_back(ground_flatness);
+          ringwise_flatness.emplace_back(ground_flatness);
         }
 
         // Ground estimation based on conditions
@@ -608,7 +608,7 @@ inline void PatchWorkpp<PointT>::estimate_ground(const pcl::PointCloud<PointT> &
         } else {
           RevertCandidate<PointT> candidate(concentric_idx, sector_idx, ground_flatness,
                                             line_variable, pc_mean_, regionwise_ground_);
-          candidates.push_back(candidate);
+          candidates.emplace_back(candidate);
         }
         // Every regionwise_nonground is considered nonground.
         cloud_nonground += regionwise_nonground_;
@@ -868,10 +868,10 @@ inline void PatchWorkpp<PointT>::extract_piecewiseground(const int &zone_idx,
             [&](const auto &p) { return p.x * normal_(0) + p.y * normal_(1) + p.z * normal_(2); });
         for (int r = 0; r < static_cast<int>(result.size()); r++) {
           if (std::fabs(result[r] + d_) < th_dist_v_) {
-            non_ground_dst.points.push_back(src_wo_verticals[r]);
-            vertical_pc_.points.push_back(src_wo_verticals[r]);
+            non_ground_dst.points.emplace_back(src_wo_verticals[r]);
+            vertical_pc_.points.emplace_back(src_wo_verticals[r]);
           } else {
-            src_tmp.points.push_back(src_wo_verticals[r]);
+            src_tmp.points.emplace_back(src_wo_verticals[r]);
           }
         }
         src_wo_verticals = src_tmp;
@@ -902,13 +902,13 @@ inline void PatchWorkpp<PointT>::extract_piecewiseground(const int &zone_idx,
     for (int r = 0; r < result.rows(); r++) {
       if (i < num_iter_ - 1) {
         if (std::fabs(result[r] + d_) < th_dist_) {
-          ground_pc_.points.push_back(src_wo_verticals[r]);
+          ground_pc_.points.emplace_back(src_wo_verticals[r]);
         }
       } else {  // Final stage
         if (std::fabs(result[r] + d_) < th_dist_) {
-          dst.points.push_back(src_wo_verticals[r]);
+          dst.points.emplace_back(src_wo_verticals[r]);
         } else {
-          non_ground_dst.points.push_back(src_wo_verticals[r]);
+          non_ground_dst.points.emplace_back(src_wo_verticals[r]);
         }
       }
     }
@@ -936,13 +936,13 @@ inline geometry_msgs::msg::PolygonStamped PatchWorkpp<PointT>::set_polygons(int 
   point.x = r_len * cos(angle);
   point.y = r_len * sin(angle);
   point.z = MARKER_Z_VALUE;
-  polygons.polygon.points.push_back(point);
+  polygons.polygon.points.emplace_back(point);
   // RU
   r_len = r_len + ring_sizes_[zone_idx];
   point.x = r_len * cos(angle);
   point.y = r_len * sin(angle);
   point.z = MARKER_Z_VALUE;
-  polygons.polygon.points.push_back(point);
+  polygons.polygon.points.emplace_back(point);
 
   // RU -> LU
   for (int idx = 1; idx <= num_split; ++idx) {
@@ -950,21 +950,21 @@ inline geometry_msgs::msg::PolygonStamped PatchWorkpp<PointT>::set_polygons(int 
     point.x = r_len * cos(angle);
     point.y = r_len * sin(angle);
     point.z = MARKER_Z_VALUE;
-    polygons.polygon.points.push_back(point);
+    polygons.polygon.points.emplace_back(point);
   }
 
   r_len = r_len - ring_sizes_[zone_idx];
   point.x = r_len * cos(angle);
   point.y = r_len * sin(angle);
   point.z = MARKER_Z_VALUE;
-  polygons.polygon.points.push_back(point);
+  polygons.polygon.points.emplace_back(point);
 
   for (int idx = 1; idx < num_split; ++idx) {
     angle = angle - sector_sizes_[zone_idx] / num_split;
     point.x = r_len * cos(angle);
     point.y = r_len * sin(angle);
     point.z = MARKER_Z_VALUE;
-    polygons.polygon.points.push_back(point);
+    polygons.polygon.points.emplace_back(point);
   }
 
   return polygons;
@@ -1022,14 +1022,14 @@ inline double PatchWorkpp<PointT>::xy2theta(const double &x, const double &y) { 
 }
 
 template <typename PointT>
-inline double PatchWorkpp<PointT>::fastatan2(const double &x, const double &y){
+inline double PatchWorkpp<PointT>::fastatan2(const double &x, const double &y) {
   // reference: https://math.stackexchange.com/questions/1098487/atan2-faster-approximation
   double absx = std::fabs(x);
   double absy = std::fabs(y);
-  if (absy < DBL_EPSILON) return (x>0. ? 0. : M_PI);
+  if (absy < DBL_EPSILON) return (x > 0. ? 0. : M_PI);
   if (absx < DBL_EPSILON) return std::copysign(M_PI_2, y);
-  if (x == y) return (x>0. ? M_PI_4 : -M_PI * 0.75);
-  if (x == -y) return (x>0. ? -M_PI_4 : M_PI * 0.75);
+  if (x == y) return (x > 0. ? M_PI_4 : -M_PI * 0.75);
+  if (x == -y) return (x > 0. ? -M_PI_4 : M_PI * 0.75);
   double a = std::fmin(absx, absy) / std::fmax(absx, absy);
   double s = a * a;
   double r = ((-0.0464964749 * s + 0.15931422) * s - 0.327622764) * s * a + a;
@@ -1076,7 +1076,7 @@ inline void PatchWorkpp<PointT>::pc2czm(const pcl::PointCloud<PointT> &src, std:
 
       czm[zone_idx][ring_idx][sector_idx].points.emplace_back(pt);
     } else {
-      cloud_nonground.push_back(pt);
+      cloud_nonground.emplace_back(pt);
     }
   }
 
