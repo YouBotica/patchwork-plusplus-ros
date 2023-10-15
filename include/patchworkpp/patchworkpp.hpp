@@ -467,12 +467,34 @@ inline void PatchWorkpp<PointT>::estimate_ground(const pcl::PointCloud<PointT> &
                                                  pcl::PointCloud<PointT> &cloud_nonground,
                                                  double &time_taken) {
   unique_lock<recursive_mutex> lock(mutex_);
-
+  // TESTING 
   /*
   poly_list_.header.stamp = node_handle_->now();
   if (!poly_list_.polygons.empty()) poly_list_.polygons.clear();
   if (!poly_list_.likelihood.empty()) poly_list_.likelihood.clear();
   */
+
+
+  sensor_height_ = node_handle_->get_parameter("sensor_height").as_double();
+  sensor_height_offset_ = node_handle_->get_parameter("sensor_height_offset").as_double();
+  num_iter_ = node_handle_->get_parameter("num_iter").as_int();
+  num_lpr_ = node_handle_->get_parameter("num_lpr").as_int();
+  num_min_pts_ = node_handle_->get_parameter("num_min_pts").as_int();
+
+  th_seeds_ = node_handle_->get_parameter("th_seeds").as_double();
+  th_dist_ = node_handle_->get_parameter("th_dist").as_double();
+  th_dist_v_ = node_handle_->get_parameter("th_dist_v").as_double();
+  max_range_ = node_handle_->get_parameter("max_r").as_double();
+  min_range_ = node_handle_->get_parameter("min_r").as_double();
+
+  uprightness_thr_ = node_handle_->get_parameter("uprightness_thr").as_double();
+  adaptive_seed_selection_margin_ = node_handle_->get_parameter("adaptive_seed_selection_margin").as_double();
+  RNR_ver_angle_thr_ = node_handle_->get_parameter("RNR_ver_angle_thr").as_double();
+  RNR_intensity_thr_ = node_handle_->get_parameter("RNR_intensity_thr").as_double();
+  max_flatness_storage_ = node_handle_->get_parameter("max_flatness_storage").as_int();
+  max_elevation_storage_ = node_handle_->get_parameter("max_elevation_storage").as_int();
+
+
 
   static double start, end;
   // static double t1, t2;
